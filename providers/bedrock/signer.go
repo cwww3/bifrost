@@ -14,9 +14,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/smithy-go/encoding/httpbinding"
+	"github.com/valyala/fasthttp"
+
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
 	schemas "github.com/cwww3/bifrost/schemas"
-	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -344,24 +345,24 @@ func signAWSRequestFastHTTP(
 	}
 
 	// Collect other headers
-	for key, value := range req.Header.All() {
+	req.Header.VisitAll(func(key, value []byte) {
 		keyStr := strings.ToLower(string(key))
 
 		// Skip ignored headers
 		if _, ignore := ignoredHeaders[keyStr]; ignore {
-			continue
+			return
 		}
 
 		// Skip if already handled
 		if keyStr == "host" || keyStr == "content-length" {
-			continue
+			return
 		}
 
 		if _, exists := headerMap[keyStr]; !exists {
 			headerNames = append(headerNames, keyStr)
 		}
 		headerMap[keyStr] = append(headerMap[keyStr], string(value))
-	}
+	})
 
 	// Sort header names
 	sort.Strings(headerNames)
