@@ -15,15 +15,17 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	providerUtils "github.com/cwww3/bifrost/providers/utils"
-	schemas "github.com/cwww3/bifrost/schemas"
 	"github.com/valyala/fasthttp"
+
+	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
+	schemas "github.com/cwww3/bifrost/schemas"
 )
 
 // OpenAIProvider implements the Provider interface for OpenAI's GPT API.
 type OpenAIProvider struct {
 	logger               schemas.Logger                // Logger for provider operations
-	client               *fasthttp.Client              // HTTP client for API requests
+	client               *clientx.Client               // HTTP client for API requests
 	networkConfig        schemas.NetworkConfig         // Network configuration including extra headers
 	sendBackRawResponse  bool                          // Whether to include raw response in BifrostResponse
 	customProviderConfig *schemas.CustomProviderConfig // Custom provider config
@@ -51,6 +53,8 @@ func NewOpenAIProvider(config *schemas.ProviderConfig, logger schemas.Logger) *O
 	// Configure proxy if provided
 	client = providerUtils.ConfigureProxy(client, config.ProxyConfig, logger)
 
+	c := clientx.WrapClient(client, config.ConnManager)
+
 	// Set default BaseURL if not provided
 	if config.NetworkConfig.BaseURL == "" {
 		config.NetworkConfig.BaseURL = "https://api.openai.com"
@@ -59,7 +63,7 @@ func NewOpenAIProvider(config *schemas.ProviderConfig, logger schemas.Logger) *O
 
 	return &OpenAIProvider{
 		logger:               logger,
-		client:               client,
+		client:               c,
 		networkConfig:        config.NetworkConfig,
 		sendBackRawResponse:  config.SendBackRawResponse,
 		customProviderConfig: config.CustomProviderConfig,
@@ -111,7 +115,7 @@ func (provider *OpenAIProvider) ListModels(ctx context.Context, keys []schemas.K
 // Returns the response and latency, or an error if the request fails.
 func listModelsByKey(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	key schemas.Key,
 	extraHeaders map[string]string,
@@ -173,7 +177,7 @@ func listModelsByKey(
 // HandleOpenAIListModelsRequest handles a list models request to OpenAI's API.
 func HandleOpenAIListModelsRequest(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	request *schemas.BifrostListModelsRequest,
 	url string,
 	keys []schemas.Key,
@@ -219,7 +223,7 @@ func (provider *OpenAIProvider) TextCompletion(ctx context.Context, key schemas.
 // HandleOpenAITextCompletionRequest handles a text completion request to OpenAI's API.
 func HandleOpenAITextCompletionRequest(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostTextCompletionRequest,
 	key schemas.Key,
@@ -322,7 +326,7 @@ func (provider *OpenAIProvider) TextCompletionStream(ctx context.Context, postHo
 // This shared function reduces code duplication between providers that use the same SSE format.
 func HandleOpenAITextCompletionStreaming(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostTextCompletionRequest,
 	authHeader map[string]string,
@@ -599,7 +603,7 @@ func (provider *OpenAIProvider) ChatCompletion(ctx context.Context, key schemas.
 // HandleOpenAIChatCompletionRequest handles a chat completion request to OpenAI's API.
 func HandleOpenAIChatCompletionRequest(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostChatRequest,
 	key schemas.Key,
@@ -708,7 +712,7 @@ func (provider *OpenAIProvider) ChatCompletionStream(ctx context.Context, postHo
 // This shared function reduces code duplication between providers that use the same SSE format.
 func HandleOpenAIChatCompletionStreaming(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostChatRequest,
 	authHeader map[string]string,
@@ -1061,7 +1065,7 @@ func (provider *OpenAIProvider) Responses(ctx context.Context, key schemas.Key, 
 // HandleOpenAIResponsesRequest handles a responses request to OpenAI's API.
 func HandleOpenAIResponsesRequest(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostResponsesRequest,
 	key schemas.Key,
@@ -1168,7 +1172,7 @@ func (provider *OpenAIProvider) ResponsesStream(ctx context.Context, postHookRun
 // This shared function reduces code duplication between providers that use the same SSE format.
 func HandleOpenAIResponsesStreaming(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostResponsesRequest,
 	authHeader map[string]string,
@@ -1409,7 +1413,7 @@ func (provider *OpenAIProvider) Embedding(ctx context.Context, key schemas.Key, 
 // This shared function reduces code duplication between providers that use the same embedding request format.
 func HandleOpenAIEmbeddingRequest(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	request *schemas.BifrostEmbeddingRequest,
 	key schemas.Key,

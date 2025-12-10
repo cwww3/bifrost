@@ -1,15 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"os"
+	"time"
 
 	"github.com/cwww3/bifrost"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	"github.com/cwww3/bifrost/schemas"
 )
 
-type MyAccount struct{}
+type MyAccount struct {
+	cm clientx.ConnManager
+}
 
 // Account interface needs to implement these 3 methods
 func (a *MyAccount) GetConfiguredProviders() ([]schemas.ModelProvider, error) {
@@ -39,12 +45,14 @@ func (a *MyAccount) GetConfigForProvider(provider schemas.ModelProvider) (*schem
 	return &schemas.ProviderConfig{
 		NetworkConfig:            c,
 		ConcurrencyAndBufferSize: schemas.DefaultConcurrencyAndBufferSize,
+		ConnManager:              a.cm,
 	}, nil
 }
 
 func main() {
+	var cm clientx.ConnManager = &connManager{}
 	client, initErr := bifrost.Init(context.Background(), schemas.BifrostConfig{
-		Account: &MyAccount{},
+		Account: &MyAccount{cm: cm},
 	})
 	if initErr != nil {
 		panic(initErr)
@@ -60,15 +68,84 @@ func main() {
 		},
 	}
 
-	response, err := client.ChatCompletionRequest(context.Background(), &schemas.BifrostChatRequest{
+	ctx := context.Background()
+
+	response, err := client.ChatCompletionRequest(ctx, &schemas.BifrostChatRequest{
 		Provider: schemas.OpenAI,
 		Model:    "gpt-4o-mini",
 		Input:    messages,
 	})
+
+	a, b := cm.GetDump()
+	fmt.Println(string(a))
+	fmt.Println(string(b))
 
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("Response:", *response.Choices[0].Message.Content.ContentStr)
+}
+
+type connManager struct {
+	conn *Conn
+}
+
+func (c *connManager) Wrap(conn net.Conn) net.Conn {
+	wc := &Conn{
+		conn: conn,
+	}
+	c.conn = wc
+	return wc
+}
+
+func (c *connManager) GetDump() ([]byte, []byte) {
+	if c.conn == nil {
+		return nil, nil
+	}
+
+	request, response := c.conn.request.Bytes(), c.conn.request.Bytes()
+	c.conn.request.Reset()
+	c.conn.response.Reset()
+	return request, response
+}
+
+type Conn struct {
+	conn     net.Conn
+	request  bytes.Buffer
+	response bytes.Buffer
+}
+
+func (c *Conn) Read(b []byte) (n int, err error) {
+	c.response.Write(b)
+	return c.conn.Read(b)
+}
+
+func (c *Conn) Write(b []byte) (n int, err error) {
+	c.request.Write(b)
+	return c.conn.Write(b)
+}
+
+func (c *Conn) Close() error {
+	return c.conn.Close()
+}
+
+func (c *Conn) LocalAddr() net.Addr {
+	return c.conn.LocalAddr()
+}
+
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
+}
+
+func (c *Conn) SetDeadline(t time.Time) error {
+	return c.conn.SetDeadline(t)
+}
+
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	return c.conn.SetDeadline(t)
+}
+
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	return c.conn.SetWriteDeadline(t)
 }

@@ -17,9 +17,11 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	schemas "github.com/cwww3/bifrost/schemas"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
+
+	"github.com/cwww3/bifrost/providers/utils/clientx"
+	schemas "github.com/cwww3/bifrost/schemas"
 )
 
 var logger schemas.Logger
@@ -36,7 +38,7 @@ var UnsupportedSpeechStreamModels = []string{"tts-1", "tts-1-hd"}
 // or times out based on its own settings. This function merely stops *waiting* for the
 // fasthttp call and returns an error related to the context.
 // Returns the request latency and any error that occurred.
-func MakeRequestWithContext(ctx context.Context, client *fasthttp.Client, req *fasthttp.Request, resp *fasthttp.Response) (time.Duration, *schemas.BifrostError) {
+func MakeRequestWithContext(ctx context.Context, client clientx.FastHttpDoer, req *fasthttp.Request, resp *fasthttp.Response) (time.Duration, *schemas.BifrostError) {
 	startTime := time.Now()
 	errChan := make(chan error, 1)
 

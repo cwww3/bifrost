@@ -5,6 +5,8 @@ import (
 	"context"
 	"maps"
 	"time"
+
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 )
 
 const (
@@ -166,6 +168,7 @@ type ProviderConfig struct {
 	ProxyConfig          *ProxyConfig          `json:"proxy_config,omitempty"` // Proxy configuration
 	SendBackRawResponse  bool                  `json:"send_back_raw_response"` // Send raw response back in the bifrost response (default: false)
 	CustomProviderConfig *CustomProviderConfig `json:"custom_provider_config,omitempty"`
+	ConnManager          clientx.ConnManager   `json:"-"`
 }
 
 func (config *ProviderConfig) CheckAndSetDefaults() {
