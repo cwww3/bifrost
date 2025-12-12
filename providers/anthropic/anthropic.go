@@ -12,15 +12,17 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	providerUtils "github.com/cwww3/bifrost/providers/utils"
-	schemas "github.com/cwww3/bifrost/schemas"
 	"github.com/valyala/fasthttp"
+
+	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
+	schemas "github.com/cwww3/bifrost/schemas"
 )
 
 // AnthropicProvider implements the Provider interface for Anthropic's Claude API.
 type AnthropicProvider struct {
 	logger               schemas.Logger                // Logger for provider operations
-	client               *fasthttp.Client              // HTTP client for API requests
+	client               clientx.FastHttpDoer          // HTTP client for API requests
 	apiVersion           string                        // API version for the provider
 	networkConfig        schemas.NetworkConfig         // Network configuration including extra headers
 	sendBackRawResponse  bool                          // Whether to include raw response in BifrostResponse
@@ -98,9 +100,11 @@ func NewAnthropicProvider(config *schemas.ProviderConfig, logger schemas.Logger)
 	}
 	config.NetworkConfig.BaseURL = strings.TrimRight(config.NetworkConfig.BaseURL, "/")
 
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
+
 	return &AnthropicProvider{
 		logger:               logger,
-		client:               client,
+		client:               c,
 		apiVersion:           "2023-06-01",
 		networkConfig:        config.NetworkConfig,
 		sendBackRawResponse:  config.SendBackRawResponse,
@@ -407,7 +411,7 @@ func (provider *AnthropicProvider) ChatCompletionStream(ctx context.Context, pos
 // This shared function reduces code duplication between providers that use the same SSE event format.
 func HandleAnthropicChatCompletionStreaming(
 	ctx context.Context,
-	client *fasthttp.Client,
+	client clientx.FastHttpDoer,
 	url string,
 	jsonBody []byte,
 	headers map[string]string,

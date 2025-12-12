@@ -8,16 +8,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/valyala/fasthttp"
+
 	"github.com/cwww3/bifrost/providers/openai"
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	schemas "github.com/cwww3/bifrost/schemas"
-	"github.com/valyala/fasthttp"
 )
 
 // OpenRouterProvider implements the Provider interface for OpenRouter's API.
 type OpenRouterProvider struct {
 	logger              schemas.Logger        // Logger for provider operations
-	client              *fasthttp.Client      // HTTP client for API requests
+	client              clientx.FastHttpDoer  // HTTP client for API requests
 	networkConfig       schemas.NetworkConfig // Network configuration including extra headers
 	sendBackRawResponse bool                  // Whether to include raw response in BifrostResponse
 }
@@ -45,9 +47,10 @@ func NewOpenRouterProvider(config *schemas.ProviderConfig, logger schemas.Logger
 	}
 	config.NetworkConfig.BaseURL = strings.TrimRight(config.NetworkConfig.BaseURL, "/")
 
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
 	return &OpenRouterProvider{
 		logger:              logger,
-		client:              client,
+		client:              c,
 		networkConfig:       config.NetworkConfig,
 		sendBackRawResponse: config.SendBackRawResponse,
 	}

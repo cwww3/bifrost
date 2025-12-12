@@ -16,9 +16,11 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"github.com/bytedance/sonic"
+
 	"github.com/cwww3/bifrost/providers/anthropic"
 	"github.com/cwww3/bifrost/providers/openai"
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	schemas "github.com/cwww3/bifrost/schemas"
 )
 
@@ -56,7 +58,7 @@ func removeVertexClient(authCredentials string) {
 // VertexProvider implements the Provider interface for Google's Vertex AI API.
 type VertexProvider struct {
 	logger              schemas.Logger        // Logger for provider operations
-	client              *fasthttp.Client      // HTTP client for API requests
+	client              clientx.FastHttpDoer  // HTTP client for API requests
 	networkConfig       schemas.NetworkConfig // Network configuration including extra headers
 	sendBackRawResponse bool                  // Whether to include raw response in BifrostResponse
 }
@@ -74,9 +76,11 @@ func NewVertexProvider(config *schemas.ProviderConfig, logger schemas.Logger) (*
 		MaxConnWaitTimeout:  10 * time.Second,
 	}
 	client = providerUtils.ConfigureProxy(client, config.ProxyConfig, logger)
+
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
 	return &VertexProvider{
 		logger:              logger,
-		client:              client,
+		client:              c,
 		networkConfig:       config.NetworkConfig,
 		sendBackRawResponse: config.SendBackRawResponse,
 	}, nil

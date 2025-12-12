@@ -5,17 +5,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"net/http"
-	"net/url"
-
 	"github.com/bytedance/sonic"
 
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	schemas "github.com/cwww3/bifrost/schemas"
 
 	"github.com/valyala/fasthttp"
@@ -66,7 +66,7 @@ func releaseCohereResponse(resp *CohereChatResponse) {
 // CohereProvider implements the Provider interface for Cohere.
 type CohereProvider struct {
 	logger               schemas.Logger                // Logger for provider operations
-	client               *fasthttp.Client              // HTTP client for API requests
+	client               clientx.FastHttpDoer          // HTTP client for API requests
 	networkConfig        schemas.NetworkConfig         // Network configuration including extra headers
 	sendBackRawResponse  bool                          // Whether to include raw response in BifrostResponse
 	customProviderConfig *schemas.CustomProviderConfig // Custom provider config
@@ -101,9 +101,11 @@ func NewCohereProvider(config *schemas.ProviderConfig, logger schemas.Logger) (*
 	}
 	config.NetworkConfig.BaseURL = strings.TrimRight(config.NetworkConfig.BaseURL, "/")
 
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
+
 	return &CohereProvider{
 		logger:               logger,
-		client:               client,
+		client:               c,
 		networkConfig:        config.NetworkConfig,
 		customProviderConfig: config.CustomProviderConfig,
 		sendBackRawResponse:  config.SendBackRawResponse,

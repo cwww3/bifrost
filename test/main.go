@@ -104,7 +104,7 @@ func (c *connManager) GetDump() ([]byte, []byte) {
 		return nil, nil
 	}
 
-	request, response := c.conn.request.Bytes(), c.conn.request.Bytes()
+	request, response := c.conn.request.Bytes(), c.conn.response.Bytes()
 	c.conn.request.Reset()
 	c.conn.response.Reset()
 	return request, response
@@ -148,4 +148,8 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 
 func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.conn.SetWriteDeadline(t)
+}
+
+func (c *Conn) Handshake() error {
+	return nil
 }

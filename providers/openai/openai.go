@@ -25,7 +25,7 @@ import (
 // OpenAIProvider implements the Provider interface for OpenAI's GPT API.
 type OpenAIProvider struct {
 	logger               schemas.Logger                // Logger for provider operations
-	client               *clientx.Client               // HTTP client for API requests
+	client               *clientx.FastHttpClientWrap   // HTTP client for API requests
 	networkConfig        schemas.NetworkConfig         // Network configuration including extra headers
 	sendBackRawResponse  bool                          // Whether to include raw response in BifrostResponse
 	customProviderConfig *schemas.CustomProviderConfig // Custom provider config
@@ -53,7 +53,7 @@ func NewOpenAIProvider(config *schemas.ProviderConfig, logger schemas.Logger) *O
 	// Configure proxy if provided
 	client = providerUtils.ConfigureProxy(client, config.ProxyConfig, logger)
 
-	c := clientx.WrapClient(client, config.ConnManager)
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
 
 	// Set default BaseURL if not provided
 	if config.NetworkConfig.BaseURL == "" {

@@ -8,16 +8,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/valyala/fasthttp"
+
 	"github.com/cwww3/bifrost/providers/openai"
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	schemas "github.com/cwww3/bifrost/schemas"
-	"github.com/valyala/fasthttp"
 )
 
 // OllamaProvider implements the Provider interface for Ollama's API.
 type OllamaProvider struct {
 	logger              schemas.Logger        // Logger for provider operations
-	client              *fasthttp.Client      // HTTP client for API requests
+	client              clientx.FastHttpDoer  // HTTP client for API requests
 	networkConfig       schemas.NetworkConfig // Network configuration including extra headers
 	sendBackRawResponse bool                  // Whether to include raw response in BifrostResponse
 }
@@ -51,9 +53,11 @@ func NewOllamaProvider(config *schemas.ProviderConfig, logger schemas.Logger) (*
 		return nil, fmt.Errorf("base_url is required for ollama provider")
 	}
 
+	c := clientx.WrapFastHttpClient(client, config.ConnManager)
+
 	return &OllamaProvider{
 		logger:              logger,
-		client:              client,
+		client:              c,
 		networkConfig:       config.NetworkConfig,
 		sendBackRawResponse: config.SendBackRawResponse,
 	}, nil

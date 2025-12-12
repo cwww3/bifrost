@@ -19,16 +19,18 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/bytedance/sonic"
+
 	"github.com/cwww3/bifrost/providers/anthropic"
 	"github.com/cwww3/bifrost/providers/cohere"
 	providerUtils "github.com/cwww3/bifrost/providers/utils"
+	"github.com/cwww3/bifrost/providers/utils/clientx"
 	schemas "github.com/cwww3/bifrost/schemas"
 )
 
 // BedrockProvider implements the Provider interface for AWS Bedrock.
 type BedrockProvider struct {
 	logger               schemas.Logger                // Logger for provider operations
-	client               *http.Client                  // HTTP client for API requests
+	client               clientx.HttpDoer              // HTTP client for API requests
 	networkConfig        schemas.NetworkConfig         // Network configuration including extra headers
 	customProviderConfig *schemas.CustomProviderConfig // Custom provider config
 	sendBackRawResponse  bool                          // Whether to include raw response in BifrostResponse
@@ -61,7 +63,8 @@ func releaseBedrockChatResponse(resp *BedrockConverseResponse) {
 func NewBedrockProvider(config *schemas.ProviderConfig, logger schemas.Logger) (*BedrockProvider, error) {
 	config.CheckAndSetDefaults()
 
-	client := &http.Client{Timeout: time.Second * time.Duration(config.NetworkConfig.DefaultRequestTimeoutInSeconds)}
+	// client := &http.Client{Timeout: time.Second * time.Duration(config.NetworkConfig.DefaultRequestTimeoutInSeconds)}
+	client := clientx.WrapHttpClient(config.ConnManager)
 
 	// Pre-warm response pools
 	for i := 0; i < config.ConcurrencyAndBufferSize.Concurrency; i++ {
