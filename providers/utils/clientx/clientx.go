@@ -2,6 +2,7 @@ package clientx
 
 import (
 	"bytes"
+	"crypto/tls"
 	"net"
 
 	"github.com/valyala/fasthttp"
@@ -25,13 +26,27 @@ func (c *Client) Do(req *fasthttp.Request, resp *fasthttp.Response) error {
 func WrapClient(client *fasthttp.Client, cm ConnManager) *Client {
 	c := new(Client)
 
+	config := &tls.Config{InsecureSkipVerify: true}
+
 	client.Dial = func(addr string) (net.Conn, error) {
 		conn, err := fasthttp.Dial(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		return cm.Wrap(conn), nil
+		// 尝试 TLS 握手
+		tlsConn := tls.Client(conn, config)
+		err = tlsConn.Handshake()
+		if err != nil {
+			// tls 握手失败 返回原始连接
+			conn, err = fasthttp.Dial(addr)
+			if err != nil {
+				return nil, err
+			}
+			return cm.Wrap(conn), nil
+		}
+
+		return cm.Wrap(tlsConn), nil
 	}
 
 	c.client = client
